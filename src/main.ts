@@ -21,8 +21,13 @@ const APP = manifest.id;
 /** Matches the template's draw priority; enough to own the screen as the running app. */
 const PRIORITY = 50;
 
-/** Loop cadence. The flash needs finer steps than the seconds it announces. */
-const TICK_MS = 100;
+/**
+ * Loop cadence. The flash needs finer steps than the seconds it announces, and
+ * the drawn second should follow the beep closely — the ear resolves timing
+ * differences of around 10 ms in an isochronous sequence, so a coarse loop is
+ * audible as an uneven rhythm.
+ */
+const TICK_MS = 25;
 
 /** Quiet time after the last encoder click before the duration is stored. */
 const SAVE_DEBOUNCE_MS = 400;
@@ -60,6 +65,8 @@ let lastEncoderMs = 0;
 let fastStreak = 0;
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
 let pendingSave: number | undefined;
+/** Pending countdown beeps, each armed against the countdown's own end time. */
+const beepTimers: ReturnType<typeof setTimeout>[] = [];
 
 const report = (err: unknown) =>
   console.error(`${APP}: ${err instanceof Error ? err.message : String(err)}`);
@@ -115,10 +122,10 @@ async function tick(): Promise<void> {
 
   const current = view();
 
-  // The tick marks each of the last seconds once, at the moment it turns over.
-  // It starts later than the flash, as the device's own timer does.
+  // The flash and the LED follow the seconds here. The beeps are scheduled
+  // separately, so that they land exactly on the boundary rather than
+  // whenever this loop happens to notice — see armBeeps.
   if (state === "running" && current.seconds !== lastSeconds) {
-    if (current.seconds > 0 && current.seconds <= TICK_SECONDS) play(TICK_SOUND);
     // The blink preset is shorter than the warning, so keep it alive by
     // cueing it once per second; that reads as blinking through the window.
     if (current.seconds > 0 && current.seconds <= WARN_SECONDS) ledCue = true;
@@ -208,12 +215,40 @@ function flushSave(): void {
   pendingSave = undefined;
 }
 
+/**
+ * Schedules the countdown's ticks.
+ *
+ * Each beep belongs to an absolute moment — one, two and three seconds before
+ * the countdown ends — so they are armed from the end time rather than from
+ * whenever this loop notices the seconds change. That keeps the interval exact
+ * (the ear resolves differences of about 10 ms in an isochronous sequence) and
+ * means they cannot drift.
+ */
+function armBeeps(): void {
+  disarmBeeps();
+  if (state !== "running") return;
+
+  const now = Date.now();
+  for (let seconds = TICK_SECONDS; seconds >= 1; seconds--) {
+    const inMs = endAtMs - seconds * 1000 - now;
+    if (inMs <= 0) continue;
+    beepTimers.push(setTimeout(() => play(TICK_SOUND), inMs));
+  }
+}
+
+/** Stops any pending beeps, when the countdown pauses, resets or leaves. */
+function disarmBeeps(): void {
+  for (const timer of beepTimers) clearTimeout(timer);
+  beepTimers.length = 0;
+}
+
 function begin(): void {
   endAtMs = Date.now() + durationMs;
   remainingMs = durationMs;
   state = "running";
   lastSeconds = null;
   ledCue = false;
+  armBeeps();
 }
 
 function pause(): void {
@@ -221,6 +256,7 @@ function pause(): void {
   state = "paused";
   lastSeconds = null;
   ledCue = false;
+  disarmBeeps();
 }
 
 function resume(): void {
@@ -228,6 +264,7 @@ function resume(): void {
   state = "running";
   lastSeconds = null;
   ledCue = false;
+  armBeeps();
 }
 
 /** Back to the start screen, keeping the duration. */
@@ -236,12 +273,14 @@ function reset(): void {
   state = "ready";
   lastSeconds = null;
   ledCue = false;
+  disarmBeeps();
 }
 
 /** Leaves the app: clearing the loop and detaching the handler ends the script. */
 function quit(): void {
   if (stopped) return;
   stopped = true;
+  disarmBeeps();
   flushSave();
   if (loop !== undefined) clearInterval(loop);
   // Not detached from inside the handler itself: with nothing else left the

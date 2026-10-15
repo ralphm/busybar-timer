@@ -53,6 +53,13 @@ device, so it survives a restart.
 the app rather than taken from the device, so no setup step is needed. See
 `ATTRIBUTION.md` for their origin and license.
 
+## Artwork
+
+`art/hourglass_16x16.png` is the source for the icon beside the time. What the
+build ships is `src/images/hourglass_16x16.image`, the same artwork in the
+device's own image format — a PNG drawn through the canvas arrives with red and
+blue exchanged, so the app uses the native format instead.
+
 ## License
 
 MIT for everything except the two files in `src/sounds/`, which are

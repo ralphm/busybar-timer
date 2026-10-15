@@ -8,9 +8,13 @@ import { formatTime, WARN_SECONDS, type TimerState } from "./timer.ts";
 const SCREEN_WIDTH = 72;
 const SCREEN_HEIGHT = 16;
 
-/** Our own hourglass, shipped with the app. Its ink spans columns 3–12. */
-const ICON = "images/hourglass_16x16.png";
-const ICON_INK_RIGHT = 13;
+/**
+ * Our own hourglass, shipped with the app as a device image. The constant is
+ * where the artwork's ink stops, measured on the bar — the time is centred in
+ * what it leaves, so this has to follow the art.
+ */
+const ICON = "images/hourglass_16x16.image";
+const ICON_INK_RIGHT = 15;
 
 /**
  * Metrics of the device's `bold` font, read from its own glyph tables. Every

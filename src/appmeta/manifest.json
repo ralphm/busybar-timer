@@ -1,0 +1,9 @@
+{
+  "format_version": 1,
+  "id": "net.ralphm.timer",
+  "name": "Timer",
+  "version": "0.1.0",
+  "api_version": "27.5.0",
+  "description": "Countdown timer for quizzes and other short timed activities",
+  "author": "Ralph Meijer"
+}

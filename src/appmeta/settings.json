@@ -1,0 +1,15 @@
+{
+  "format_version": 1,
+  "version": 1,
+  "fields": {
+    "duration": {
+      "label": "Countdown",
+      "description": "Seconds the countdown runs, 5 to 3595 (59:55), in 5-second steps. The encoder sets the same value on the app's start screen.",
+      "type": "integer",
+      "default": 30,
+      "min": 5,
+      "max": 3595,
+      "step": 5
+    }
+  }
+}

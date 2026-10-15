@@ -13,8 +13,8 @@ const SCREEN_HEIGHT = 16;
  * where the artwork's ink stops, measured on the bar — the time is centred in
  * what it leaves, so this has to follow the art.
  */
-const ICON = "images/hourglass_16x16.image";
-const ICON_INK_RIGHT = 15;
+const ICON = "images/hourglass_16x16.png";
+const ICON_INK_RIGHT = 13;
 
 /**
  * Metrics of the device's `bold` font, read from its own glyph tables. Every

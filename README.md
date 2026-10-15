@@ -55,10 +55,9 @@ the app rather than taken from the device, so no setup step is needed. See
 
 ## Artwork
 
-`art/hourglass_16x16.png` is the source for the icon beside the time. What the
-build ships is `src/images/hourglass_16x16.image`, the same artwork in the
-device's own image format — a PNG drawn through the canvas arrives with red and
-blue exchanged, so the app uses the native format instead.
+`src/images/hourglass_16x16.png` is the icon beside the time, drawn at its final
+size with hard edges: on an LED matrix antialiasing only dims the boundary
+pixels, which reads as a dark outline around the shape.
 
 ## License
 

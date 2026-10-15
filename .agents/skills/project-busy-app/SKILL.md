@@ -203,15 +203,20 @@ Do not use this skill for:
   `start_11x11`, …). Verified on the bar, 2026-10-15: a raw image element with
   `stock_path: "shared/images/dt_study.image"` renders as drawn, and needs no
   size — the device knows each image's dimensions.
-- **PNG images drawn by an app come out with red and blue exchanged.** Verified
-  on a device: a file pixel of `232,112,26` rendered as `25,109,227`. Compensate
-  by swapping the channels in the shipped file, or sidestep it by using the
-  device's own stock images. The apps-menu icons (`appmeta/icon_front_8x8.png`,
-  `icon_back_11x11.png`) go through the launcher instead and are not affected —
-  the built-in clock app's icon is near-greyscale, which is why this went
-  unnoticed upstream.
-- An image with translucent edges shows the display's black through them and
-  reads as a grey halo; flatten the image onto black before shipping it.
+- **Images drawn by an app: prefer the device's own `.image` format over PNG.**
+  Through the canvas a PNG comes out with red and blue exchanged (verified: a
+  file pixel of `232,112,26` rendered as `25,109,227`), while the same artwork
+  as an LVGL `.image` renders true. The `.image` is a 16-byte header — magic
+  `0x19`, colour format, flags, width, height, stride, reserved, all
+  little-endian — followed by the pixels; for ARGB8888 (`0x10`) the pixels go
+  out as **R, G, B, A** bytes (measured: B,G,R,A came out blue). Both routes
+  were measured on the bar, 2026-10-15. The apps-menu icons
+  (`appmeta/icon_front_8x8.png`, `icon_back_11x11.png`) are read by the
+  launcher rather than the canvas and are unaffected — the built-in clock app's
+  icon is near-greyscale, which is why the PNG behaviour went unnoticed
+  upstream.
+- A PNG with translucent edges shows the display's black through them and reads
+  as a grey halo; flatten such artwork onto black before converting it.
 
 ### Storage and its hard limit
 

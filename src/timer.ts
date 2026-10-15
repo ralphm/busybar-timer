@@ -11,9 +11,9 @@ export const DURATION_STEP = 5;
 export const DURATION_DEFAULT = 30;
 
 /** Quick clicks closer together than this count as turning fast. */
-export const FAST_TURN_MS = 300;
+export const FAST_TURN_MS = 250;
 /** Quick clicks in a row before the longer step takes over. */
-export const FAST_TURN_CLICKS = 3;
+export const FAST_TURN_CLICKS = 4;
 /** The long step lands on whole multiples of this many seconds. */
 export const FAST_SNAP = 30;
 

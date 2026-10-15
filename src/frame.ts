@@ -8,12 +8,8 @@ import { formatTime, WARN_SECONDS, type TimerState } from "./timer.ts";
 const SCREEN_WIDTH = 72;
 const SCREEN_HEIGHT = 16;
 
-/**
- * A 16×16 icon from the device's own sticker set, pinned hard left. It is a
- * stock image, so it costs no asset of ours, and it never flashes — only the
- * time does. Its ink ends at column 12.
- */
-const ICON = "shared/images/dt_study.image";
+/** Our own hourglass, shipped with the app. Its ink spans columns 3–12. */
+const ICON = "images/hourglass_16x16.png";
 const ICON_INK_RIGHT = 13;
 
 /**
@@ -84,14 +80,17 @@ export function elements(view: View): DisplayElement[] {
   const colonColor =
     flashing || view.state !== "running" ? color : view.colonLit ? WHITE : BLINKED;
 
-  // "DONE" keeps the same element ids as the time, so nothing lingers.
-  const text = view.state === "finished" ? "DONE" : formatTime(view.seconds);
+  // Both texts occupy the same five elements: "DONE" is padded with a space so
+  // the element that carried the last digit is always redrawn — otherwise a
+  // stale digit is left sitting under the finished screen.
+  const finished = view.state === "finished";
+  const text = finished ? "DONE " : formatTime(view.seconds);
 
   const out: DisplayElement[] = [
     {
       type: "image",
       id: "icon",
-      stock_path: ICON,
+      path: ICON,
       x: 0,
       y: 0,
       align: "top_left",
@@ -99,7 +98,8 @@ export function elements(view: View): DisplayElement[] {
     },
   ];
 
-  let x = textX(text);
+  // Centred on what is visible; the padding space falls outside the text.
+  let x = textX(finished ? "DONE" : text);
   for (let i = 0; i < text.length; i++) {
     const char = text[i]!;
     out.push({

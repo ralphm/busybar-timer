@@ -10,6 +10,12 @@
       "min": 5,
       "max": 3595,
       "step": 5
+    },
+    "sound": {
+      "label": "Sound",
+      "description": "Play the ticking and finish cues.",
+      "type": "boolean",
+      "default": true
     }
   }
 }

@@ -42,10 +42,11 @@ HTTP 405.
 
 ## Settings
 
-`src/appmeta/settings.json` gives the app a settings screen with one field,
-`duration` — 5 to 3595 seconds (`00:05` to `59:55`), in 5-second steps. The
-encoder changes the same value from the app's start screen and stores it on the
-device, so it survives a restart.
+`src/appmeta/settings.json` gives the app a settings screen with two fields:
+`duration` — 5 to 3595 seconds (`00:05` to `59:55`), in 5-second steps — and
+`sound`, which turns the ticking and finish cues off and on again, on by
+default. The encoder changes the duration from the app's start screen as well,
+and both are stored on the device, so they survive a restart.
 
 ## Sounds
 

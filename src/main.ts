@@ -43,8 +43,9 @@ const TICK_SOUND = "sounds/countdown_tick.snd";
 const FINISH_SOUND = "sounds/countdown_finish.snd";
 
 const SETTINGS_VERSION = 1;
-/** Key under which the duration is also kept locally (localStorage is per app). */
-const CACHE_KEY = "duration";
+/** Local mirrors of the settings, so the first frame and first cue are right. */
+const CACHE_DURATION = "duration";
+const CACHE_SOUND = "sound";
 
 let state: TimerState = "ready";
 let durationMs = DURATION_DEFAULT * 1000;
@@ -54,6 +55,10 @@ let endAtMs = 0;
 let remainingMs = durationMs;
 /** When the finish announcement began. */
 let finishedAtMs = 0;
+/** Whether the countdown's cues are played; on unless the settings say otherwise. */
+let soundOn = true;
+/** The settings document as last read, so writing one field keeps the others. */
+let storedValues: Record<string, unknown> = {};
 /** While now is before this, a freshly started countdown shows the glass turning. */
 let flipUntilMs = 0;
 /** The last whole second drawn while running; a change is what fires the tick. */
@@ -79,8 +84,9 @@ const cues: ReturnType<typeof setTimeout>[] = [];
 const report = (err: unknown) =>
   console.error(`${APP}: ${err instanceof Error ? err.message : String(err)}`);
 
-/** Plays one of the app's bundled sounds. */
+/** Plays one of the app's bundled sounds, unless sound has been turned off. */
 function play(file: string): void {
+  if (!soundOn) return;
   void audioPlay(APP, file).catch(report);
 }
 
@@ -197,46 +203,69 @@ function redraw(): void {
 
 /** The duration the app last ran with, kept locally so its first frame is right. */
 function cachedDuration(): number | undefined {
+  const raw = cacheGet(CACHE_DURATION);
+  return raw === null ? undefined : normalizeDuration(Number(raw));
+}
+
+function cachedSound(): boolean | undefined {
+  const raw = cacheGet(CACHE_SOUND);
+  return raw === null ? undefined : raw === "1";
+}
+
+function cacheGet(key: string): string | null {
   try {
-    const raw = localStorage.getItem(CACHE_KEY);
-    return raw === null ? undefined : normalizeDuration(Number(raw));
+    return localStorage.getItem(key);
   } catch (err) {
     report(err);
-    return undefined;
+    return null;
   }
 }
 
-/** Reads the stored duration and reconciles it with the local copy. */
-async function loadDuration(): Promise<void> {
+function cacheSet(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch (err) {
+    report(err);
+  }
+}
+
+/** A stored sound flag: anything that is not a boolean means its default, on. */
+function normalizeSound(value: unknown): boolean {
+  return typeof value === "boolean" ? value : true;
+}
+
+/** Reads the stored settings and reconciles them with the local copies. */
+async function loadSettings(): Promise<void> {
   try {
     const document = await getAppSettings(APP);
-    const stored = (document.values as Record<string, unknown> | undefined)?.["duration"];
-    const seconds = normalizeDuration(stored);
-    if (seconds === Math.round(durationMs / 1000)) return;
+    storedValues = (document.values as Record<string, unknown> | undefined) ?? {};
 
-    durationMs = seconds * 1000;
-    if (state === "ready") remainingMs = durationMs;
-    remember(seconds);
+    const seconds = normalizeDuration(storedValues["duration"]);
+    if (seconds !== Math.round(durationMs / 1000)) {
+      durationMs = seconds * 1000;
+      if (state === "ready") remainingMs = durationMs;
+    }
+    cacheSet(CACHE_DURATION, String(seconds));
+
+    soundOn = normalizeSound(storedValues["sound"]);
+    cacheSet(CACHE_SOUND, soundOn ? "1" : "0");
   } catch (err) {
     report(err);
   }
 }
 
-/** Keeps the duration locally, so a later start draws it before any round trip. */
-function remember(seconds: number): void {
-  try {
-    localStorage.setItem(CACHE_KEY, String(seconds));
-  } catch (err) {
-    report(err);
-  }
-}
-
-/** Stores the duration. Best effort: a failed write must not break the timer. */
+/**
+ * Stores the duration. The device replaces the whole document, so everything
+ * else it held — the sound flag among it — is written back with it.
+ * Best effort: a failed write must not break the timer.
+ */
 function saveDuration(seconds: number): void {
-  void setAppSettings(APP, {
-    version: SETTINGS_VERSION,
-    values: { duration: seconds },
-  }).catch(report);
+  const values: Record<string, unknown> = {};
+  for (const key of Object.keys(storedValues)) values[key] = storedValues[key];
+  values["duration"] = seconds;
+  storedValues = values;
+
+  void setAppSettings(APP, { version: SETTINGS_VERSION, values }).catch(report);
 }
 
 /** Stores the duration once the encoder has been still for a moment. */
@@ -254,7 +283,7 @@ function flushSave(): void {
   }
   if (pendingSave === undefined) return;
 
-  remember(pendingSave);
+  cacheSet(CACHE_DURATION, String(pendingSave));
   saveDuration(pendingSave);
   pendingSave = undefined;
 }
@@ -405,16 +434,18 @@ function main(): void {
     else if (event.key === "back") onBack();
   });
 
-  // The locally kept duration first, so the screen never shows the default and
+  // The locally kept settings first, so the screen never shows the default and
   // then jumps to the configured value once the settings arrive.
   const cached = cachedDuration();
   if (cached !== undefined) {
     durationMs = cached * 1000;
     remainingMs = durationMs;
   }
+  const cachedSoundOn = cachedSound();
+  if (cachedSoundOn !== undefined) soundOn = cachedSoundOn;
 
   redraw();
-  void loadDuration().then(redraw).catch(report);
+  void loadSettings().then(redraw).catch(report);
 }
 
 main();

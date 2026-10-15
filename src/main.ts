@@ -116,13 +116,18 @@ function view(): View {
   const seconds = secondsLeft(remainingNow());
 
   // The flashing turns over on the countdown's own timeline — the same moments
-  // the digits change and the beeps sound. Taking its phase from the wall clock
-  // instead leaves it drifting against both. Once the countdown has run out it
-  // is anchored to that moment, so the finish keeps flashing.
+  // the digits change and the cues sound. Taking its phase from the wall clock
+  // instead leaves it drifting against both.
+  //
+  // The phase is deliberately the second half of each second: the digits are
+  // lit from the instant they change, so a new second is never spent invisible,
+  // and the status LED — cued at that same moment — flashes with the text
+  // rather than against it. The finish is anchored to its own beginning for the
+  // same reason.
   const flashOn =
     state === "finished"
       ? Math.floor((Date.now() - finishedAtMs) / FLASH_MS) % 2 === 0
-      : Math.floor(remainingNow() / FLASH_MS) % 2 === 0;
+      : Math.floor(remainingNow() / FLASH_MS) % 2 === 1;
 
   return {
     state,

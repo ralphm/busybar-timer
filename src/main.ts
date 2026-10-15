@@ -115,13 +115,21 @@ function drainFrame(step: number): string {
 function view(): View {
   const seconds = secondsLeft(remainingNow());
 
+  // The flashing turns over on the countdown's own timeline — the same moments
+  // the digits change and the beeps sound. Taking its phase from the wall clock
+  // instead leaves it drifting against both. Once the countdown has run out it
+  // is anchored to that moment, so the finish keeps flashing.
+  const flashOn =
+    state === "finished"
+      ? Math.floor((Date.now() - finishedAtMs) / FLASH_MS) % 2 === 0
+      : Math.floor(remainingNow() / FLASH_MS) % 2 === 0;
+
   return {
     state,
     seconds,
     icon: iconPath(),
-    flashOn: Math.floor(Date.now() / FLASH_MS) % 2 === 0,
-    // The colon turns over with the digits. Taking its phase from the clock
-    // instead drifts out of step with them between second boundaries.
+    flashOn,
+    // The colon turns over with the digits.
     colonLit: seconds % 2 === 0,
   };
 }

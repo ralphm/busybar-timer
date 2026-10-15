@@ -10,10 +10,10 @@ const SCREEN_HEIGHT = 16;
 
 /**
  * The hourglass frames (drawn by tools/make-icon.py) carry their ink to column
- * 12; the time is centred in what they leave. Measured on the bar, so it
+ * 13; the time is centred in what they leave. Measured on the bar, so it
  * follows the artwork.
  */
-const ICON_INK_RIGHT = 13;
+const ICON_INK_RIGHT = 14;
 
 /**
  * Metrics of the device's `bold` font, read from its own glyph tables. Every

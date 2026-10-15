@@ -19,7 +19,7 @@ from pathlib import Path
 from PIL import Image
 
 SIZE = 16
-CX = 7.5
+CX = 8.5            # a little right of centre in the cell
 TOP, BOTTOM = 1, 14
 WAIST = 0.9          # half-width at the neck
 WIDE = 4.5           # half-width at the caps
@@ -33,7 +33,7 @@ GLASS = (26, 20, 12)
 HIGHLIGHT = (255, 242, 220)
 
 DRAIN_STEPS = 21
-FLIP_SQUASH = [1.0, 0.55, 0.18, 0.55, 1.0]
+FLIP_TUMBLE = [1.0, 0.62, 0.22, 0.62, 1.0]
 
 OUT = Path(__file__).resolve().parent.parent / "src" / "images"
 
@@ -88,12 +88,13 @@ def draw(top_fraction):
     return img
 
 
-def squashed(img, width_fraction):
-    """The same frame seen mid-turn: squeezed horizontally, then centred."""
-    width = max(1, int(round(SIZE * width_fraction)))
-    narrow = img.resize((width, SIZE), Image.NEAREST)
+def tumbled(img, height_fraction):
+    """The same frame mid-turn: an hourglass is turned end over end, so the
+    glass shortens towards its middle — a turn about the horizontal axis."""
+    height = max(1, int(round(SIZE * height_fraction)))
+    short = img.resize((SIZE, height), Image.NEAREST)
     out = Image.new("RGB", (SIZE, SIZE), (0, 0, 0))
-    out.paste(narrow, ((SIZE - width) // 2, 0))
+    out.paste(short, (0, (SIZE - height) // 2))
     return out
 
 
@@ -105,13 +106,14 @@ def main():
         top_fraction = 1.0 - step / (DRAIN_STEPS - 1)
         draw(top_fraction).save(OUT / f"hourglass-{step:02d}.png")
 
-    # The turn: the spent glass squeezing edge-on, then the full one widening
-    # back out. It begins and ends at full width so it joins both states.
-    for i, squash in enumerate(FLIP_SQUASH):
-        spent = draw(0.0) if i < len(FLIP_SQUASH) // 2 else draw(1.0)
-        squashed(spent, squash).save(OUT / f"hourglass-flip-{i}.png")
+    # The turn: the glass shortening end over end, then opening out again with
+    # the sand at the top. It begins and ends at full height, so it joins the
+    # spent glass before it and the full one after.
+    for i, squash in enumerate(FLIP_TUMBLE):
+        spent = draw(0.0) if i < len(FLIP_TUMBLE) // 2 else draw(1.0)
+        tumbled(spent, squash).save(OUT / f"hourglass-flip-{i}.png")
 
-    print(f"wrote {DRAIN_STEPS} drain frames and {len(FLIP_SQUASH)} flip frames to {OUT}")
+    print(f"wrote {DRAIN_STEPS} drain frames and {len(FLIP_TUMBLE)} flip frames to {OUT}")
 
 
 if __name__ == "__main__":

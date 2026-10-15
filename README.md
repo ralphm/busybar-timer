@@ -62,7 +62,9 @@ countdown turns it over, and it drains as the time runs down.
 
 The frames are drawn at their final size with hard edges — on an LED matrix a
 half-lit pixel reads as a dim lamp, so there is nothing for antialiasing to
-smooth.
+smooth. The same script draws the two icons the apps menu shows
+(`src/appmeta/icon_front_8x8.png` and the back display's), with the same glass
+and sand: empty above, filled below.
 
 ## License
 

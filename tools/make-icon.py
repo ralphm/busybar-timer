@@ -35,7 +35,30 @@ HIGHLIGHT = (255, 242, 220)
 DRAIN_STEPS = 21
 FLIP_TUMBLE = [1.0, 0.62, 0.22, 0.62, 1.0]
 
-OUT = Path(__file__).resolve().parent.parent / "src" / "images"
+SRC = Path(__file__).resolve().parent.parent / "src"
+OUT = SRC / "images"
+
+# The apps-menu icons: the shape below, 5x7 in an 8x8 canvas, and the same idea
+# as a plain hourglass for the monochrome back display.
+MENU_SHAPE = """*****
+*000*
+ *0*
+ *0*
+ *0*
+*000*
+*****""".split("\n")
+
+BACK_SHAPE = """###########
+#000000000#
+.#0000000#.
+..#00000#..
+...#000#...
+....#0#....
+...#000#...
+..#00000#..
+.#0000000#.
+#000000000#
+###########""".split("\n")
 
 
 def lerp(a, b, t):
@@ -98,8 +121,32 @@ def tumbled(img, height_fraction):
     return out
 
 
+def draw_badge(rows, size, frame, sand_top, sand_bottom, glass):
+    """One of the app's own icons: fram, empty glass above, sand below."""
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    px = img.load()
+    height = len(rows)
+    offset = (size - height) // 2
+    middle = height / 2
+
+    for y, row in enumerate(rows):
+        for i, c in enumerate(row):
+            if c in " .":
+                continue
+            x = offset + i
+            if c == "*" or c == "#":
+                px[x, y + offset] = frame
+            elif y + 0.5 >= middle:
+                # the lower half holds the sand, deeper towards the bottom
+                px[x, y + offset] = sand_top if y < middle else sand_bottom
+            else:
+                px[x, y + offset] = glass
+    return img
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
+    (SRC / "appmeta").mkdir(parents=True, exist_ok=True)
 
     for step in range(DRAIN_STEPS):
         # step 0 is a full upper bulb — the moment the hourglass has been turned
@@ -113,7 +160,20 @@ def main():
         spent = draw(0.0) if i < len(FLIP_TUMBLE) // 2 else draw(1.0)
         tumbled(spent, squash).save(OUT / f"hourglass-flip-{i}.png")
 
-    print(f"wrote {DRAIN_STEPS} drain frames and {len(FLIP_TUMBLE)} flip frames to {OUT}")
+    # The icons the apps menu shows, in the same colours as the glass beside
+    # the time: white frame, orange sand in the lower half, dim empty glass.
+    draw_badge(
+        MENU_SHAPE, 8,
+        (255, 255, 255, 255), (255, 176, 76, 255), (238, 126, 28, 255), GLASS + (255,),
+    ).save(SRC / "appmeta" / "icon_front_8x8.png")
+
+    # The back display is monochrome, so the same design in greys.
+    draw_badge(
+        BACK_SHAPE, 11,
+        (255, 255, 255, 255), (232, 232, 232, 255), (170, 170, 170, 255), (26, 26, 26, 255),
+    ).save(SRC / "appmeta" / "icon_back_11x11.png")
+
+    print(f"wrote {DRAIN_STEPS} drain frames, {len(FLIP_TUMBLE)} flip frames and the two menu icons")
 
 
 if __name__ == "__main__":

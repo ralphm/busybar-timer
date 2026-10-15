@@ -203,6 +203,15 @@ Do not use this skill for:
   `start_11x11`, …). Verified on the bar, 2026-10-15: a raw image element with
   `stock_path: "shared/images/dt_study.image"` renders as drawn, and needs no
   size — the device knows each image's dimensions.
+- **PNG images drawn by an app come out with red and blue exchanged.** Verified
+  on a device: a file pixel of `232,112,26` rendered as `25,109,227`. Compensate
+  by swapping the channels in the shipped file, or sidestep it by using the
+  device's own stock images. The apps-menu icons (`appmeta/icon_front_8x8.png`,
+  `icon_back_11x11.png`) go through the launcher instead and are not affected —
+  the built-in clock app's icon is near-greyscale, which is why this went
+  unnoticed upstream.
+- An image with translucent edges shows the display's black through them and
+  reads as a grey halo; flatten the image onto black before shipping it.
 
 ### Storage and its hard limit
 

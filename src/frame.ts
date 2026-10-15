@@ -9,11 +9,10 @@ const SCREEN_WIDTH = 72;
 const SCREEN_HEIGHT = 16;
 
 /**
- * Our own hourglass, shipped with the app as a device image. The constant is
- * where the artwork's ink stops, measured on the bar — the time is centred in
- * what it leaves, so this has to follow the art.
+ * The hourglass frames (drawn by tools/make-icon.py) carry their ink to column
+ * 12; the time is centred in what they leave. Measured on the bar, so it
+ * follows the artwork.
  */
-const ICON = "images/hourglass_16x16.png";
 const ICON_INK_RIGHT = 13;
 
 /**
@@ -46,6 +45,8 @@ export interface View {
   state: TimerState;
   /** Whole seconds the app is showing. */
   seconds: number;
+  /** Which hourglass frame to draw, as a path inside the app's images/. */
+  icon: string;
   /** The lit half of the flash cycle. Only meaningful while warning or finished. */
   flashOn: boolean;
   /** Which half of the colon's blink is current. Only meaningful while running. */
@@ -94,7 +95,7 @@ export function elements(view: View): DisplayElement[] {
     {
       type: "image",
       id: "icon",
-      path: ICON,
+      path: view.icon,
       x: 0,
       y: 0,
       align: "top_left",

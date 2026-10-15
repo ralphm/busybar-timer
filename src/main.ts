@@ -29,6 +29,12 @@ const PRIORITY = 50;
  */
 const TICK_MS = 25;
 
+/** Frames of the hourglass drain, drawn by tools/make-icon.py. */
+const DRAIN_FRAMES = 21;
+/** The turn at the start: five frames, this long each. */
+const FLIP_MS = 80;
+const FLIP_FRAMES = 5;
+
 /** Quiet time after the last encoder click before the duration is stored. */
 const SAVE_DEBOUNCE_MS = 400;
 
@@ -48,6 +54,8 @@ let endAtMs = 0;
 let remainingMs = durationMs;
 /** When the finish announcement began. */
 let finishedAtMs = 0;
+/** While now is before this, a freshly started countdown shows the glass turning. */
+let flipUntilMs = 0;
 /** The last whole second drawn while running; a change is what fires the tick. */
 let lastSeconds: number | null = null;
 /** Newest frame sent, so an unchanged one costs nothing. */
@@ -83,6 +91,26 @@ function remainingNow(): number {
   return remainingMs;
 }
 
+/** The hourglass frame for the current state. */
+function iconPath(): string {
+  // Idle and finished both show a spent glass: the sand has run down.
+  if (state === "ready" || state === "finished") return drainFrame(DRAIN_FRAMES - 1);
+
+  const now = Date.now();
+  if(now < flipUntilMs) {
+    const elapsed = FLIP_MS * FLIP_FRAMES - (flipUntilMs - now);
+    return `images/hourglass-flip-${Math.min(FLIP_FRAMES - 1, Math.floor(elapsed / FLIP_MS))}.png`;
+  }
+
+  const fraction = durationMs > 0 ? remainingNow() / durationMs : 0;
+  return drainFrame(Math.round((1 - fraction) * (DRAIN_FRAMES - 1)));
+}
+
+function drainFrame(step: number): string {
+  const clamped = Math.min(DRAIN_FRAMES - 1, Math.max(0, step));
+  return `images/hourglass-${String(clamped).padStart(2, "0")}.png`;
+}
+
 /** The frame the device should be showing now. */
 function view(): View {
   const seconds = secondsLeft(remainingNow());
@@ -90,6 +118,7 @@ function view(): View {
   return {
     state,
     seconds,
+    icon: iconPath(),
     flashOn: Math.floor(Date.now() / FLASH_MS) % 2 === 0,
     // The colon turns over with the digits. Taking its phase from the clock
     // instead drifts out of step with them between second boundaries.
@@ -134,7 +163,7 @@ async function tick(): Promise<void> {
     lastSeconds = current.seconds;
   }
 
-  const key = `${current.state}|${current.seconds}|${current.flashOn}`;
+  const key = `${current.state}|${current.seconds}|${current.flashOn}|${current.icon}`;
   if (key === shown) return;
 
   shown = key;
@@ -252,6 +281,7 @@ function disarmCues(): void {
 }
 
 function begin(): void {
+  flipUntilMs = Date.now() + FLIP_MS * FLIP_FRAMES;
   endAtMs = Date.now() + durationMs;
   remainingMs = durationMs;
   state = "running";
@@ -261,6 +291,7 @@ function begin(): void {
 }
 
 function pause(): void {
+  flipUntilMs = 0;
   remainingMs = remainingNow();
   state = "paused";
   lastSeconds = null;
@@ -269,6 +300,7 @@ function pause(): void {
 }
 
 function resume(): void {
+  flipUntilMs = 0;
   endAtMs = Date.now() + remainingMs;
   state = "running";
   lastSeconds = null;
@@ -278,6 +310,7 @@ function resume(): void {
 
 /** Back to the start screen, keeping the duration. */
 function reset(): void {
+  flipUntilMs = 0;
   remainingMs = durationMs;
   state = "ready";
   lastSeconds = null;

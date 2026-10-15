@@ -55,9 +55,13 @@ the app rather than taken from the device, so no setup step is needed. See
 
 ## Artwork
 
-`src/images/hourglass_16x16.png` is the icon beside the time, drawn at its final
-size with hard edges: on an LED matrix antialiasing only dims the boundary
-pixels, which reads as a dark outline around the shape.
+`src/images/` holds the hourglass beside the time: one frame per step of its
+drain, drawn by `tools/make-icon.py`. The idle screen shows it spent, starting a
+countdown turns it over, and it drains as the time runs down.
+
+The frames are drawn at their final size with hard edges — on an LED matrix a
+half-lit pixel reads as a dim lamp, so there is nothing for antialiasing to
+smooth.
 
 ## License
 

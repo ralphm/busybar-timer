@@ -215,6 +215,11 @@ Do not use this skill for:
   chevron), where the same artwork as a PNG did not. Antialiased boundaries
   also read as a dark outline, because on an LED matrix a half-lit edge pixel
   is a lit pixel — there is no blending to hide it in.
+- The front display's pixels are **round lamps with gaps**, not squares
+  (observed on the bar). A partially lit pixel therefore reads as a dim lamp
+  rather than a soft edge, and shading happens *through* the grid: depth comes
+  from varying brightness across neighbouring lamps — a lit side, a darkened
+  side, a specular streak — not from smooth gradients.
 
 ### Storage and its hard limit
 

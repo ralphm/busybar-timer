@@ -49,6 +49,8 @@ const CACHE_SOUND = "sound";
 
 let state: TimerState = "ready";
 let durationMs = DURATION_DEFAULT * 1000;
+/** The duration the run now counting down started with, so a settings load landing mid-run cannot re-base the hourglass. */
+let runDurationMs = durationMs;
 /** When the countdown ends, while running. */
 let endAtMs = 0;
 /** What is left, while paused or between runs. */
@@ -108,7 +110,7 @@ function iconPath(): string {
     return `images/hourglass-flip-${Math.min(FLIP_FRAMES - 1, Math.floor(elapsed / FLIP_MS))}.png`;
   }
 
-  const fraction = durationMs > 0 ? remainingNow() / durationMs : 0;
+  const fraction = runDurationMs > 0 ? remainingNow() / runDurationMs : 0;
   return drainFrame(Math.round((1 - fraction) * (DRAIN_FRAMES - 1)));
 }
 
@@ -333,6 +335,7 @@ function disarmCues(): void {
 function begin(): void {
   flipUntilMs = Date.now() + FLIP_MS * FLIP_FRAMES;
   endAtMs = Date.now() + durationMs;
+  runDurationMs = durationMs;
   remainingMs = durationMs;
   state = "running";
   lastSeconds = null;

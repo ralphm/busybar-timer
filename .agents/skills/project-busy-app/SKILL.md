@@ -144,6 +144,35 @@ Do not use this skill for:
   (`js_app_launcher_scene_run.c`). The first draw with a priority at or above
   the launcher's takes the screen, so an app that loads settings over HTTP
   before its first draw leaves a visible blank gap — draw the default first.
+- The canvas steps aside on its own: a **short** press of Back (or Busy, Off,
+  Settings, Apps) makes the canvas service clear **all** of the app's
+  elements and close its layer, revealing the launcher's widgets — which
+  still hold its paused "Loading..." screen for the whole run. An app that
+  draws a still frame and only redraws when its view changes therefore
+  vanishes and looks hung; re-assert the frame on the back events that follow
+  the press (`short`/`release`), not only on view changes. Evidence:
+  `busy-app/busybar-firmware @ 63f20dd931ef`,
+  `applications/services/canvas/canvas.c` (input callback →
+  `CanvasSrvEventExit` → `canvas_srv_clear` → `canvas_screen_close`),
+  `applications/system/js_app_launcher/scenes/js_app_launcher_scene_run.c`
+  (spinners are paused on ScriptStarted, never hidden).
+- `animation` elements take `path`/`stock_path`, `section`, `loop`,
+  `await_previous_end` and `opacity`. Re-drawing the same id with the same
+  path does **not** restart playback — the anim player keeps its file — so a
+  looping overlay can ride along in every frame. Elements in one draw get
+  z-index 0, 10, 20… in array order; an overlay must follow the element it
+  covers or carry an explicit `z_index` above it (a tie hid an overlay under
+  an opaque image on the bar). `argb8888` animations composite over other
+  elements (verified on the bar: the shipped azuki animation over the app's
+  icon). Evidence: `busy-app/busybar-firmware @ 63f20dd931ef`,
+  `applications/services/web_server/http_api/api_display.c`,
+  `applications/services/canvas/canvas_widgets.c`.
+- Device `.anim` files are packed from a folder of PNG frames (numbered
+  `frame_00000.png`… plus `meta.json` with `fps`, `color_mode`, `sections`)
+  by the firmware's own `scripts/seq2anim.py`; busy-tools has no converter,
+  and the script needs `colorlog` and `Pillow`. The firmware's `scripts/**`
+  is GPL-2.0-or-later — use it as a tool from a checkout, never vendor it.
+  Reproduced byte-identically against the shipped `spinner_front_8x8`.
 - **Keep the script small, or the app starts noticeably slower than the
   built-ins.** The Loading screen lasts until the script has been parsed and
   linked (`js_runner.c`, `run_file_cmd_handler`: read → `jerry_parse` →

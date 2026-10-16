@@ -35,7 +35,21 @@ export interface ImageElement {
   display?: "front" | "back";
 }
 
-export type DisplayElement = TextElement | ImageElement;
+/** An animation element as /api/display/draw takes it. */
+export interface AnimationElement {
+  type: "animation";
+  id: string;
+  path?: string;
+  stock_path?: string;
+  loop?: boolean;
+  opacity?: number;
+  x?: number;
+  y?: number;
+  align?: string;
+  display?: "front" | "back";
+}
+
+export type DisplayElement = TextElement | ImageElement | AnimationElement;
 
 export interface DrawRequest {
   application_name: string;
@@ -68,6 +82,19 @@ function post(body: unknown): RequestInit {
 
 export async function displayDraw(request: DrawRequest): Promise<void> {
   await call("/display/draw", post(request));
+}
+
+/** Removes named elements. The device refuses ids it does not hold, so call
+ * only for elements this app drew and has not removed. */
+export async function displayDelete(
+  applicationName: string,
+  elementIds: string[],
+): Promise<void> {
+  await call("/display/draw", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ application_name: applicationName, element_ids: elementIds }),
+  });
 }
 
 /** Plays a file from the app's own assets, e.g. "sounds/countdown_tick.snd". */

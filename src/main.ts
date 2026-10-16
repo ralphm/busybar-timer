@@ -442,6 +442,17 @@ function main(): void {
       onEncoder(event.delta);
       return;
     }
+    if (event.key === "back" && event.action !== "press") {
+      // The device's canvas clears this app's drawing on every back short
+      // press — the platform steps its layer aside for its own GUI, and the
+      // launcher's "Loading..." screen sits exposed underneath. The press
+      // already acted on the timer, and its repaint may have landed before
+      // that clear, so re-assert the frame on the events that follow the
+      // press: this repaint is issued after the clear was dispatched.
+      shown = "";
+      redraw();
+      return;
+    }
     if (event.action !== "press") return;
     if (event.key === "start") onMain();
     else if (event.key === "back") onBack();

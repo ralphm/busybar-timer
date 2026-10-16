@@ -24,7 +24,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-STATE_NAMES = ["ready", "running", "warning", "paused", "finished"]
+STATE_NAMES = ["ready", "running", "paused", "warning", "finished"]
 
 # Lamp rendering: each framebuffer pixel becomes a circle with a gap, drawn at
 # a supersampled size and scaled down, which is what makes the edges smooth.
@@ -153,16 +153,20 @@ def set_duration(bar, seconds, step=5):
 
 
 def capture_states(bar, scale):
+    """Captures the five states so they read as one countdown: the ready
+    screen shows the run's full duration, then the run is caught mid-way, at
+    the pause, at the red warning, and at the finish."""
     images = {}
 
-    images["ready"] = our_screen(bar)
-
     set_duration(bar, 25)
+    images["ready"] = our_screen(bar)      # the start value of the run below
+
     bar.press("start")
-    time.sleep(5.0)
+    time.sleep(5.0)                        # 00:20 of the 25 s run
     images["running"] = best_of(bar, 4, white_ink)
 
-    bar.press("start", 0.7)                # pause mid-run
+    time.sleep(6.0)                        # ~00:14, then pause: ~00:13
+    bar.press("start", 0.7)
     images["paused"] = our_screen(bar)
 
     bar.press("start")                     # resume into the red warning

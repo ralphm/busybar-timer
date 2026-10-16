@@ -1,5 +1,5 @@
 {
-  "name": "timer-app",
+  "name": "busybar-timer",
   "private": true,
   "version": "0.1.0",
   "description": "Countdown timer for quizzes and other short timed activities",

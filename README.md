@@ -9,7 +9,7 @@ timed activities. The app is `net.ralphm.timer`.
 | ------------ | ----------------- | --------------- | --------------- | ------------------------ |
 | Main button  | start             | pause           | resume          | start a full countdown   |
 | Encoder      | set the duration  | —               | —               | —                        |
-| Back         | leave the app     | back to the top | reset           | back to the top          |
+| Back         | leave the app     | back to the top | back to the top | back to the top          |
 
 The time reads like `00:30`, with the app's own hourglass beside it. During the
 last five seconds it flashes red and the status LED blinks along; the last

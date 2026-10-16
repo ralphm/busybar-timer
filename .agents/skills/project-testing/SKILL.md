@@ -47,15 +47,18 @@ Do not use this skill for:
   confirm it is the intended device (`/api/status`, `usb_mac`) before acting.
   Evidence: `busy-app/busy-tools @ efbc7e93c889`,
   `packages/cli/src/lib/device.ts`.
-- **The app can be driven without hands.** `POST /api/input?key=<start|back|up|down>`
+- **The app can be driven without hands.** `POST /api/input?key=<start|back|up|down|ok>`
   sends a key press, so every state can be exercised from the workstation:
   verified 2026-10-15 by running a whole countdown — start, pause, resume, back
   and the finish's automatic return — and reading each state off `/api/screen`.
   Matching the icon region against `src/images/*.png` even identifies which
-  frame is drawn. Keep the capture's colour caveat in mind (see
+  frame is drawn. `up` and `down` address the encoder — one call is one turn,
+  which the runner reports to the app as `{key: 'encoder', delta: ±1}` — and
+  `ok` is the encoder's push, so the encoder path is drivable too. Keep the capture's colour caveat in mind (see
   `project-busy-app`): brightness and geometry are faithful, colours are not.
   Evidence: `busy-app/busybar-firmware @ d3869762c768`,
-  `applications/services/web_server/openapi/input.yaml`.
+  `applications/services/web_server/openapi/input.yaml`,
+  `applications/services/js_runner/js_input.c`.
 - Flashing a dev firmware onto a bar needs BOTH processors in step: the U5
   (main) and the Si917 (wireless/radio). The intercom handshake exchanges a
   git-hash-derived control string, so a U5-only flash against an older Si917

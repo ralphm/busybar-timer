@@ -73,6 +73,11 @@ Do not use this skill for:
 - Globals available in the app: `fetch`, `listen`, `setInterval`/`setTimeout`/
   `clearInterval`/`clearTimeout`, `console`, `localStorage`. There is no
   `Settings` global.
+- The app stays resident while a request is in flight:
+  `app_has_background_tasks()` counts an active fetch, so a fire-and-forget
+  write started just before the script ends — a settings save at quit — still
+  completes. Evidence: `busy-app/busybar-firmware @ 63f20dd931ef`,
+  `applications/services/js_runner/js_runner.c`.
 - The device address is compiled in at build time (`busy-cli build --addr`);
   the template's `shared/device.ts` builds API URLs from it and defaults to the
   USB address (`localhost`).
@@ -103,7 +108,8 @@ Do not use this skill for:
 - This app's mapping: the large main button is `start`, the side button is
   `back`, the round encoder changes the duration, and `ok` is unused.
   Evidence: `applications/services/js_runner/js_input.c` (`InputKeyStart` →
-  `start`, `InputKeyBack` → `back`, `InputKeyUp`/`Down` → `encoder`).
+  `start`, `InputKeyBack` → `back`, `InputKeyUp`/`Down` → `encoder` — the bar
+  has no separate up/down buttons; those are the encoder's turns).
 
 ### Display
 

@@ -255,17 +255,25 @@ async function loadSettings(): Promise<void> {
 }
 
 /**
- * Stores the duration. The device replaces the whole document, so everything
- * else it held — the sound flag among it — is written back with it.
+ * Stores the duration. The device replaces the whole document, so it is read
+ * back first: a change made elsewhere — the API, or another tool — while the
+ * app was running must not be overwritten with the copy read at launch. That
+ * copy stays the fallback, so a failed read still stores the duration.
  * Best effort: a failed write must not break the timer.
  */
-function saveDuration(seconds: number): void {
-  const values: Record<string, unknown> = {};
-  for (const key of Object.keys(storedValues)) values[key] = storedValues[key];
+async function saveDuration(seconds: number): Promise<void> {
+  let values: Record<string, unknown>;
+  try {
+    const document = await getAppSettings(APP);
+    values = { ...((document.values as Record<string, unknown> | undefined) ?? {}) };
+  } catch (err) {
+    report(err);
+    values = { ...storedValues };
+  }
   values["duration"] = seconds;
   storedValues = values;
 
-  void setAppSettings(APP, { version: SETTINGS_VERSION, values }).catch(report);
+  await setAppSettings(APP, { version: SETTINGS_VERSION, values });
 }
 
 /** Stores the duration once the encoder has been still for a moment. */
@@ -284,7 +292,7 @@ function flushSave(): void {
   if (pendingSave === undefined) return;
 
   cacheSet(CACHE_DURATION, String(pendingSave));
-  saveDuration(pendingSave);
+  void saveDuration(pendingSave).catch(report);
   pendingSave = undefined;
 }
 

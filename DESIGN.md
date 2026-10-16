@@ -126,6 +126,10 @@ pnpm app:uninstall --addr <host>  # remove it
 python3 tools/make-screenshots.py --addr <host>   # refresh docs/ from a real bar
 ```
 
+Installing on a bar needs firmware that includes the JavaScript app platform
+(`js_runner` and the `/api/apps` API). Release 1.2.4 and everything before it
+predate that, and an install there answers with HTTP 405.
+
 The layout in `src/` is a straight translation of the sections above:
 `timer.ts` holds the countdown's rules, `frame.ts` builds the display
 elements, `main.ts` is the loop that ties input, state and drawing together,

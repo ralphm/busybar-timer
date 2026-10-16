@@ -91,9 +91,12 @@ def ours(img):
 
     The bar pops its own screens over running apps (meeting reminders, for
     one), and those use saturated blues and greens; this app only ever draws
-    white, warm greys, ambers and red.
+    white, warm greys, ambers and red. The app's own drawing also always has
+    the hourglass at the left edge, which the launcher's screens (its
+    Loading screen included) do not.
     """
     px = img.load()
+    icon_ink = 0
     for y in range(16):
         for x in range(72):
             r, g, b = px[x, y]
@@ -101,7 +104,9 @@ def ours(img):
                 return False
             if g > 120 and g > r + 40 and g > b + 40:
                 return False
-    return True
+            if x <= 14 and (r * 299 + g * 587 + b * 114) // 1000 > 20:
+                icon_ink += 1
+    return icon_ink >= 10
 
 
 def our_screen(bar, timeout=15.0):

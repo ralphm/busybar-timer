@@ -1,4 +1,4 @@
-import { audioPlay, displayDraw, getAppSettings, setAppSettings } from "@shared/device";
+import { audioPlay, displayDelete, displayDraw, getAppSettings, setAppSettings } from "@shared/device";
 import manifest from "./appmeta/manifest.json";
 import { elements, ledColor, type View } from "./frame.ts";
 import {
@@ -31,9 +31,12 @@ const TICK_MS = 25;
 
 /** Frames of the hourglass drain, drawn by tools/make-icon.py. */
 const DRAIN_FRAMES = 21;
-/** The turn at the start: five frames, this long each. */
-const FLIP_MS = 80;
-const FLIP_FRAMES = 5;
+/** The spin at the start: eight frames of the glass going over, this long each. */
+const FLIP_MS = 60;
+const FLIP_FRAMES = 8;
+/** The pause tip: three frames of the glass going over, each this long. */
+const TIP_MS = 80;
+const TIP_FRAMES = 3;
 
 /** Quiet time after the last encoder click before the duration is stored. */
 const SAVE_DEBOUNCE_MS = 400;
@@ -63,10 +66,17 @@ let soundOn = true;
 let storedValues: Record<string, unknown> = {};
 /** While now is before this, a freshly started countdown shows the glass turning. */
 let flipUntilMs = 0;
+/** The pause tip: when it began and when it is done, whichever way it runs. */
+let tipStartMs = 0;
+let tipUntilMs = 0;
+/** Whether the tip in flight stands the glass back up (resuming). */
+let tipResuming = false;
 /** The last whole second drawn while running; a change is what fires the tick. */
 let lastSeconds: number | null = null;
 /** Newest frame sent, so an unchanged one costs nothing. */
 let shown = "";
+/** Whether the pouring overlay is on the device, so leaving the run removes it. */
+let poured = false;
 /** Set when this frame should (re)start the device's LED blink. */
 let ledCue = false;
 let drawing = false;
@@ -110,17 +120,39 @@ function iconPath(): string {
     return `images/hourglass-flip-${Math.min(FLIP_FRAMES - 1, Math.floor(elapsed / FLIP_MS))}.png`;
   }
 
+  const step = drainStep();
+
+  // Pausing lays the glass on its side — a real hourglass cannot pause any
+  // other way — and resuming stands it back up. The return tip replays the
+  // same frames backwards, so the glass turns the way it came.
+  if (now < tipUntilMs) {
+    const i = Math.min(TIP_FRAMES - 1, Math.floor((now - tipStartMs) / TIP_MS));
+    const frame = tipResuming ? TIP_FRAMES - 1 - i : i;
+    return `images/hourglass-tip-${frame}-${paddedStep(step)}.png`;
+  }
+  if (state === "paused") return `images/hourglass-side-${paddedStep(step)}.png`;
+
+  return drainFrame(step);
+}
+
+/** The drain step the current level shows, 0 (full) up to DRAIN_FRAMES - 1. */
+function drainStep(): number {
   const fraction = runDurationMs > 0 ? remainingNow() / runDurationMs : 0;
-  return drainFrame(Math.round((1 - fraction) * (DRAIN_FRAMES - 1)));
+  return Math.round((1 - fraction) * (DRAIN_FRAMES - 1));
 }
 
 function drainFrame(step: number): string {
+  return `images/hourglass-${paddedStep(step)}.png`;
+}
+
+function paddedStep(step: number): string {
   const clamped = Math.min(DRAIN_FRAMES - 1, Math.max(0, step));
-  return `images/hourglass-${String(clamped).padStart(2, "0")}.png`;
+  return String(clamped).padStart(2, "0");
 }
 
 /** The frame the device should be showing now. */
 function view(): View {
+  const now = Date.now();
   const seconds = secondsLeft(remainingNow());
 
   // The flashing turns over on the countdown's own timeline — the same moments
@@ -134,7 +166,7 @@ function view(): View {
   // same reason.
   const flashOn =
     state === "finished"
-      ? Math.floor((Date.now() - finishedAtMs) / FLASH_MS) % 2 === 0
+      ? Math.floor((now - finishedAtMs) / FLASH_MS) % 2 === 0
       : Math.floor(remainingNow() / FLASH_MS) % 2 === 1;
 
   return {
@@ -144,6 +176,9 @@ function view(): View {
     flashOn,
     // The colon turns over with the digits.
     colonLit: seconds % 2 === 0,
+    // The pour starts once the glass is upright again — after the start turn
+    // and after a pause tip coming back up; a glass on its side does not pour.
+    pouring: state === "running" && now >= flipUntilMs && now >= tipUntilMs,
   };
 }
 
@@ -159,6 +194,17 @@ async function draw(current: View, cue: boolean): Promise<void> {
     led_notification_color: cue ? ledColor(current) : undefined,
     elements: elements(current),
   });
+
+  // The pour rides along while it plays; leaving the run takes it off the
+  // glass again, so a paused or spent hourglass does not keep pouring. The
+  // delete is best effort: the platform can clear the canvas on its own, and
+  // a gone element is nothing to repair.
+  if (current.pouring) {
+    poured = true;
+  } else if (poured) {
+    poured = false;
+    void displayDelete(APP, ["pour"]).catch(report);
+  }
 }
 
 /** One pass of the loop: settle the state, cue the sounds, redraw if the frame changed. */
@@ -352,6 +398,7 @@ function pause(): void {
   lastSeconds = null;
   ledCue = false;
   disarmCues();
+  startTip(false);
 }
 
 function resume(): void {
@@ -361,6 +408,14 @@ function resume(): void {
   lastSeconds = null;
   ledCue = false;
   armCues();
+  startTip(true);
+}
+
+/** Plays the pause tip: the glass going over to its side, or standing back up. */
+function startTip(resuming: boolean): void {
+  tipStartMs = Date.now();
+  tipUntilMs = tipStartMs + TIP_MS * TIP_FRAMES;
+  tipResuming = resuming;
 }
 
 /** Back to the start screen, keeping the duration. */

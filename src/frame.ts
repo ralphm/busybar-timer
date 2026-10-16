@@ -51,6 +51,8 @@ export interface View {
   flashOn: boolean;
   /** Which half of the colon's blink is current. Only meaningful while running. */
   colonLit: boolean;
+  /** The pouring overlay: on while the countdown runs, once the turn is done. */
+  pouring: boolean;
 }
 
 /** A finished countdown or the last seconds of one flashes; nothing else does. */
@@ -102,6 +104,22 @@ export function elements(view: View): DisplayElement[] {
       display: "front",
     },
   ];
+
+  // The pour sits over the glass, so its element follows the icon's and the
+  // device stacks it above. Drawing it again while it plays does not restart
+  // it — the device keeps running the same animation.
+  if (view.pouring) {
+    out.push({
+      type: "animation",
+      id: "pour",
+      path: "animations/hourglass-stream.anim",
+      loop: true,
+      x: 0,
+      y: 0,
+      align: "top_left",
+      display: "front",
+    });
+  }
 
   // Centred on what is visible; the padding space falls outside the text.
   let x = textX(finished ? "DONE" : text);

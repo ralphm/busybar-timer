@@ -59,6 +59,20 @@ Do not use this skill for:
   Evidence: `busy-app/busybar-firmware @ d3869762c768`,
   `applications/services/web_server/openapi/input.yaml`,
   `applications/services/js_runner/js_input.c`.
+- **The endpoint cannot emulate a human press.** Each call is one instant
+  press+short+release (`input_key_toggle`), so there is no long press and no
+  gap between press and release. Behaviour that depends on that gap — the
+  canvas clearing the app's frame between the press and the release, for one —
+  cannot be reproduced through the API; it must be checked by hand on the bar.
+  API runs cover the state machine, not the timing.
+- **The bar pops its own screens over a running app** (meeting reminders, for
+  one), which corrupts captures taken on the assumption that the app is
+  visible. Detect them as frames containing saturated blue or green (this app
+  only ever draws white, warm greys, ambers and red) and retry.
+  `tools/make-screenshots.py` brokers all of it for the docs: it reads the
+  stored duration before driving the encoder, walks the five states, guards
+  every capture, undoes the red/blue swap, renders each pixel as a round lamp
+  and writes the state images plus the countdown GIF.
 - Flashing a dev firmware onto a bar needs BOTH processors in step: the U5
   (main) and the Si917 (wireless/radio). The intercom handshake exchanges a
   git-hash-derived control string, so a U5-only flash against an older Si917

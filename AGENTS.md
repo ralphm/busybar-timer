@@ -360,6 +360,9 @@ Output/reference skills:
 - Run: `pnpm app:run --addr <host>`
 - Stop: `pnpm app:stop --addr <host>`
 - Uninstall: `pnpm app:uninstall --addr <host>`
+- Regenerate the hourglass frames: `python3 tools/make-icon.py`
+- Rebuild the pouring animation: `python3 tools/make-animation.py --firmware <busybar-firmware checkout>` (needs Pillow and colorlog)
+- Refresh the docs captures: `python3 tools/make-screenshots.py --addr <host>` (the app must be running on its ready screen)
 
 The device is reachable at its USB address by default; over Wi-Fi pass
 `--addr` to the `busy-cli app` commands.

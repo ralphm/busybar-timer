@@ -73,6 +73,11 @@ Do not use this skill for:
 - Globals available in the app: `fetch`, `listen`, `setInterval`/`setTimeout`/
   `clearInterval`/`clearTimeout`, `console`, `localStorage`. There is no
   `Settings` global.
+- The app stays resident while a request is in flight:
+  `app_has_background_tasks()` counts an active fetch, so a fire-and-forget
+  write started just before the script ends — a settings save at quit — still
+  completes. Evidence: `busy-app/busybar-firmware @ 63f20dd931ef`,
+  `applications/services/js_runner/js_runner.c`.
 - The device address is compiled in at build time (`busy-cli build --addr`);
   the template's `shared/device.ts` builds API URLs from it and defaults to the
   USB address (`localhost`).
@@ -103,7 +108,8 @@ Do not use this skill for:
 - This app's mapping: the large main button is `start`, the side button is
   `back`, the round encoder changes the duration, and `ok` is unused.
   Evidence: `applications/services/js_runner/js_input.c` (`InputKeyStart` →
-  `start`, `InputKeyBack` → `back`, `InputKeyUp`/`Down` → `encoder`).
+  `start`, `InputKeyBack` → `back`, `InputKeyUp`/`Down` → `encoder` — the bar
+  has no separate up/down buttons; those are the encoder's turns).
 
 ### Display
 
@@ -203,6 +209,23 @@ Do not use this skill for:
   `start_11x11`, …). Verified on the bar, 2026-10-15: a raw image element with
   `stock_path: "shared/images/dt_study.image"` renders as drawn, and needs no
   size — the device knows each image's dimensions.
+- **Do not judge an image's colours from `/api/screen`.** The capture (and the
+  web UI built on it) returns red and blue exchanged relative to the physical
+  panel: an orange icon read as blue in the capture while showing orange on the
+  bar, and a file deliberately pre-swapped read correctly in the capture while
+  showing blue on the bar. Ship colours as they are and check them with your
+  eyes on the device. Verified against the bar, 2026-10-15.
+- Draw app images as PNGs at their final size, with hard edges. A 16×16
+  ARGB8888 LVGL `.image` written to the documented header layout came out
+  **skewed** on the bar (its left edge drifted across the rows, reading as a
+  chevron), where the same artwork as a PNG did not. Antialiased boundaries
+  also read as a dark outline, because on an LED matrix a half-lit edge pixel
+  is a lit pixel — there is no blending to hide it in.
+- The front display's pixels are **round lamps with gaps**, not squares
+  (observed on the bar). A partially lit pixel therefore reads as a dim lamp
+  rather than a soft edge, and shading happens *through* the grid: depth comes
+  from varying brightness across neighbouring lamps — a lit side, a darkened
+  side, a specular streak — not from smooth gradients.
 
 ### Storage and its hard limit
 

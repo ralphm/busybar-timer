@@ -187,10 +187,12 @@ async function tick(): Promise<void> {
   const key = `${current.state}|${current.seconds}|${current.flashOn}|${current.icon}`;
   if (key === shown) return;
 
-  shown = key;
   const cue = ledCue;
-  ledCue = false;
   await draw(current, cue);
+  // Only a frame the device took counts as shown; a failed draw is retried on
+  // the next tick, with its LED cue still pending.
+  shown = key;
+  ledCue = false;
 }
 
 /** One pass of the loop, never two at once. */

@@ -11,6 +11,24 @@
       "max": 3595,
       "step": 5
     },
+    "warning_seconds": {
+      "label": "Warning",
+      "description": "Show the time in amber through the final seconds of the countdown, in 5-second steps, but only when it started beyond that mark. 0 turns the stage off.",
+      "type": "integer",
+      "default": 0,
+      "min": 0,
+      "max": 3595,
+      "step": 5
+    },
+    "critical_seconds": {
+      "label": "Critical",
+      "description": "Show the time in red through the final seconds of the countdown, in 5-second steps, but only when it started beyond that mark. 0 turns the stage off; the value never exceeds the warning seconds.",
+      "type": "integer",
+      "default": 0,
+      "min": 0,
+      "max": 3595,
+      "step": 5
+    },
     "sound": {
       "label": "Sound",
       "description": "Play the ticking and finish cues.",

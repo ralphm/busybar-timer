@@ -14,6 +14,8 @@ A countdown timer for the BUSY Bar, for running quiz rounds and other short time
 
 The last seconds of a countdown flash red, with ticks and a blink of the status LED, as the bar's own timer does. At zero the finish cue plays and the app returns to its start screen — or the main button starts a fresh countdown straight away. Pausing lays the hourglass on its side until you resume.
 
+Long countdowns can announce their final stretches: with the warning and critical settings on, the time turns amber through the last warning seconds and red through the last critical seconds — 5-second steps, mirroring the duration — but only when the countdown started beyond those marks, so a session that began inside one never changes colour. Entering a stage blinks the status LED in its colour once, and a pause keeps the stage's colour until you resume.
+
 ## Installing
 
 The app is built from source. Node 24 (see `.nvmrc`) and pnpm are required.
@@ -28,7 +30,7 @@ Once installed, launch it from the bar's apps menu. To remove it again, run `pnp
 
 ## Settings
 
-The app has a settings screen with two fields: `duration` — the countdown length, 5 seconds to 59:55 in 5-second steps — and `sound`, which turns the ticking and finish cues off and on again. The encoder changes the duration from the app's start screen as well. Both are stored on the device, so they survive a restart.
+The app has a settings screen with four fields: `duration` — the countdown length, 5 seconds to 59:55 in 5-second steps —, `warning_seconds` and `critical_seconds` — the last seconds of a long countdown, shown in amber and then red when the session started beyond those marks, also in 5-second steps and each off at 0 —, and `sound`, which turns the ticking and finish cues off and on again. The encoder changes the duration from the app's start screen as well. All are stored on the device, so they survive a restart.
 
 ## License
 

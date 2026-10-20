@@ -2,7 +2,7 @@
 // (and checked by hand) without hardware.
 
 import type { DisplayElement } from "@shared/device";
-import { formatTime, WARN_SECONDS, type TimerState } from "./timer.ts";
+import { formatTime, WARN_SECONDS, type Stage, type TimerState } from "./timer.ts";
 
 /** The front display. */
 const SCREEN_WIDTH = 72;
@@ -37,14 +37,36 @@ const DIM = "#FFFFFF80";
 /** The colon on its dim half, as the device's own clock dims it. */
 const BLINKED = "#FFFFFF66";
 const RED = "#FF0000FF";
+/** The warning stage: deep into a long countdown, urgency readable at a glance. */
+const AMBER = "#FFB000FF";
 /** The dark half of the flash: drawn, but invisible. */
 const OFF = "#00000000";
+
+// The stages carry on through the pause and the colon's blink, so they need
+// the same dimmed and half-lit variants white has.
+const AMBER_DIM = "#FFB00080";
+const AMBER_BLINKED = "#FFB00066";
+const RED_DIM = "#FF000080";
+const RED_BLINKED = "#FF000066";
+
+/** One stage's colours: lit, paused, and the colon's unlit half. */
+interface StagePalette {
+  lit: string;
+  dim: string;
+  blink: string;
+}
+
+const NORMAL: StagePalette = { lit: WHITE, dim: DIM, blink: BLINKED };
+const WARNING: StagePalette = { lit: AMBER, dim: AMBER_DIM, blink: AMBER_BLINKED };
+const CRITICAL: StagePalette = { lit: RED, dim: RED_DIM, blink: RED_BLINKED };
 
 /** One frame's worth of state. */
 export interface View {
   state: TimerState;
   /** Whole seconds the app is showing. */
   seconds: number;
+  /** The colour stage; only meaningful while running or paused. */
+  stage: Stage;
   /** Which hourglass frame to draw, as a path inside the app's images/. */
   icon: string;
   /** The lit half of the flash cycle. Only meaningful while warning or finished. */
@@ -62,7 +84,15 @@ export function isFlashing(view: View): boolean {
 
 /** The colour the status LED should blink, or undefined to leave the LED alone. */
 export function ledColor(view: View): string | undefined {
-  return isFlashing(view) ? RED : undefined;
+  if (isFlashing(view)) return RED;
+  if (view.state !== "running") return undefined;
+  return view.stage === "warning" ? AMBER : view.stage === "critical" ? RED : undefined;
+}
+
+/** The stage's colours, for a countdown on screen; everything else keeps white. */
+function palette(view: View): StagePalette {
+  if (view.state !== "running" && view.state !== "paused") return NORMAL;
+  return view.stage === "warning" ? WARNING : view.stage === "critical" ? CRITICAL : NORMAL;
 }
 
 /** Where the text starts: centred in the space the icon leaves. */
@@ -83,9 +113,16 @@ function textX(text: string): number {
 export function elements(view: View): DisplayElement[] {
   const flashing = isFlashing(view);
   const lit = !flashing || view.flashOn;
-  const color = flashing ? (lit ? RED : OFF) : view.state === "paused" ? DIM : WHITE;
+  const stage = palette(view);
+  const color = flashing
+    ? lit
+      ? RED
+      : OFF
+    : view.state === "paused"
+      ? stage.dim
+      : stage.lit;
   const colonColor =
-    flashing || view.state !== "running" ? color : view.colonLit ? WHITE : BLINKED;
+    flashing || view.state !== "running" ? color : view.colonLit ? stage.lit : stage.blink;
 
   // Both texts occupy the same five elements: "DONE" is padded with a space so
   // the element that carried the last digit is always redrawn — otherwise a

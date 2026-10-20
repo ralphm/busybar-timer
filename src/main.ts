@@ -2,16 +2,19 @@ import { audioPlay, displayDelete, displayDraw, getAppSettings, setAppSettings }
 import manifest from "./appmeta/manifest.json";
 import { elements, ledColor, type View } from "./frame.ts";
 import {
+  colorStage,
   DURATION_DEFAULT,
   FAST_TURN_CLICKS,
   FAST_TURN_MS,
   FINISH_MS,
   FLASH_MS,
   normalizeDuration,
+  normalizeThreshold,
   secondsLeft,
   stepDuration,
   TICK_SECONDS,
   WARN_SECONDS,
+  type Stage,
   type TimerState,
 } from "./timer.ts";
 
@@ -45,13 +48,26 @@ const SAVE_DEBOUNCE_MS = 400;
 const TICK_SOUND = "sounds/countdown_tick.snd";
 const FINISH_SOUND = "sounds/countdown_finish.snd";
 
+/** Stays 1: JS app settings have no migration hooks, so a version bump makes
+ * the device reset the stored document to defaults — additive fields must
+ * keep the version and lean on the device filling missing ones from schema
+ * defaults. Evidence: busy-app/busybar-firmware @ a3246bf035b4,
+ * lib/js_app/js_app_settings_storage.c (setting_provider_alloc(.., NULL, 0)),
+ * lib/setting_provider/setting_provider.c (migrations_apply, internal_load). */
 const SETTINGS_VERSION = 1;
 /** Local mirrors of the settings, so the first frame and first cue are right. */
 const CACHE_DURATION = "duration";
+const CACHE_WARNING = "warningSeconds";
+const CACHE_CRITICAL = "criticalSeconds";
 const CACHE_SOUND = "sound";
 
 let state: TimerState = "ready";
 let durationMs = DURATION_DEFAULT * 1000;
+/** The stage thresholds in 5-second units, 0 meaning off; the settings keep them. */
+let warningSeconds = 0;
+let criticalSeconds = 0;
+/** The stage the running countdown was last shown in, so each entry cues the LED once. */
+let lastStage: Stage = "normal";
 /** The duration the run now counting down started with, so a settings load landing mid-run cannot re-base the hourglass. */
 let runDurationMs = durationMs;
 /** When the countdown ends, while running. */
@@ -169,9 +185,18 @@ function view(): View {
       ? Math.floor((now - finishedAtMs) / FLASH_MS) % 2 === 0
       : Math.floor(remainingNow() / FLASH_MS) % 2 === 1;
 
+  // The stage is gated on the duration the run started with, not the settings'
+  // current duration: a session set inside a threshold was never in the final
+  // stretch of anything, so it should not colour at all.
+  const stage =
+    state === "running" || state === "paused"
+      ? colorStage(seconds, Math.round(runDurationMs / 1000), warningSeconds, criticalSeconds)
+      : "normal";
+
   return {
     state,
     seconds,
+    stage,
     icon: iconPath(),
     flashOn,
     // The colon turns over with the digits.
@@ -230,7 +255,15 @@ async function tick(): Promise<void> {
     lastSeconds = current.seconds;
   }
 
-  const key = `${current.state}|${current.seconds}|${current.flashOn}|${current.icon}`;
+  // Entering a stage is a one-shot announcement: the preset is three blinks
+  // over three seconds, and a draw that carries the colour again would
+  // restart it, so the cue rides only the frame the transition lands in.
+  if (state === "running" && current.stage !== lastStage) {
+    if (current.stage !== "normal") ledCue = true;
+    lastStage = current.stage;
+  }
+
+  const key = `${current.state}|${current.seconds}|${current.stage}|${current.flashOn}|${current.icon}`;
   if (key === shown) return;
 
   const cue = ledCue;
@@ -260,6 +293,11 @@ function cachedDuration(): number | undefined {
 function cachedSound(): boolean | undefined {
   const raw = cacheGet(CACHE_SOUND);
   return raw === null ? undefined : raw === "1";
+}
+
+function cachedThreshold(key: string): number | undefined {
+  const raw = cacheGet(key);
+  return raw === null ? undefined : normalizeThreshold(Number(raw));
 }
 
 function cacheGet(key: string): string | null {
@@ -296,6 +334,15 @@ async function loadSettings(): Promise<void> {
       if (state === "ready") remainingMs = durationMs;
     }
     cacheSet(CACHE_DURATION, String(seconds));
+
+    // The thresholds are clamped, not rejected: a stored document can come
+    // from the API, and the red stage must always be the inner one.
+    const warning = normalizeThreshold(storedValues["warning_seconds"]);
+    const critical = Math.min(warning, normalizeThreshold(storedValues["critical_seconds"]));
+    warningSeconds = warning;
+    criticalSeconds = critical;
+    cacheSet(CACHE_WARNING, String(warning));
+    cacheSet(CACHE_CRITICAL, String(critical));
 
     soundOn = normalizeSound(storedValues["sound"]);
     cacheSet(CACHE_SOUND, soundOn ? "1" : "0");
@@ -387,6 +434,7 @@ function begin(): void {
   remainingMs = durationMs;
   state = "running";
   lastSeconds = null;
+  lastStage = "normal";
   ledCue = false;
   armCues();
 }
@@ -424,6 +472,7 @@ function reset(): void {
   remainingMs = durationMs;
   state = "ready";
   lastSeconds = null;
+  lastStage = "normal";
   ledCue = false;
   disarmCues();
 }
@@ -522,6 +571,10 @@ function main(): void {
   }
   const cachedSoundOn = cachedSound();
   if (cachedSoundOn !== undefined) soundOn = cachedSoundOn;
+  const cachedWarning = cachedThreshold(CACHE_WARNING);
+  if (cachedWarning !== undefined) warningSeconds = cachedWarning;
+  const cachedCritical = cachedThreshold(CACHE_CRITICAL);
+  if (cachedCritical !== undefined) criticalSeconds = Math.min(warningSeconds, cachedCritical);
 
   redraw();
   void loadSettings().then(redraw).catch(report);

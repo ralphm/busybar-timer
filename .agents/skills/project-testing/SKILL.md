@@ -59,6 +59,7 @@ Do not use this skill for:
   Evidence: `busy-app/busybar-firmware @ d3869762c768`,
   `applications/services/web_server/openapi/input.yaml`,
   `applications/services/js_runner/js_input.c`.
+- **The app's private state is readable over HTTP.** `GET /api/storage/read?path=/ext/apps_data/jsrunner/<app_id>.localstorage.json` returns the runner's localStorage document for the app — how to observe in-app state (e.g. the encoder's debounced cache) when an on-device settings write is blocked by firmware (see `project-busy-app`, upstream #1104). Verified 2026-10-20.
 - **The endpoint cannot emulate a human press.** Each call is one instant
   press+short+release (`input_key_toggle`), so there is no long press and no
   gap between press and release. Behaviour that depends on that gap — the
@@ -148,6 +149,10 @@ Live checklist, at minimum for a release-grade change:
 - pause and resume do not drift the remaining time;
 - encoder changes the configured duration and the value survives an app restart;
 - flashing cue and LED behave as designed;
+- warning and critical stages colour the time at their 5-second boundaries
+  (each only when the run started beyond the mark, dimmed through a pause,
+  one LED blink of the stage colour on entry), and reproduce the plain
+  white countdown when both are 0;
 - sounds play at the designed moments (tick near the end, finish at zero);
 - stopping the app (or `pnpm app:stop`) leaves the device clean.
 

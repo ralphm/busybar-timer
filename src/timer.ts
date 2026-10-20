@@ -19,6 +19,10 @@ export const FAST_SNAP = 30;
 
 /** Seconds left when the countdown starts flashing and the LED blinks. */
 export const WARN_SECONDS = 5;
+
+/** The colour stage of a countdown, below the final-seconds flash. */
+export type Stage = "normal" | "warning" | "critical";
+
 /** Seconds left when the countdown starts ticking, as the device's own timer does. */
 export const TICK_SECONDS = 3;
 
@@ -41,6 +45,42 @@ export function normalizeDuration(value: unknown): number {
 /** Whole seconds left. Rounded up, so 700 ms reads as 1 and only 0 reads as 0. */
 export function secondsLeft(remainingMs: number): number {
   return Math.max(0, Math.ceil(remainingMs / 1000));
+}
+
+/**
+ * Clamps a stored seconds threshold to a whole 5-second step inside the
+ * bounds; anything unusable means off. Thresholds step like the duration, so
+ * the final 20 or 10 seconds are exactly as settable as the countdown itself.
+ */
+export function normalizeThreshold(value: unknown): number {
+  const seconds = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(seconds)) return 0;
+
+  const stepped = Math.round(seconds / DURATION_STEP) * DURATION_STEP;
+  return Math.min(DURATION_MAX, Math.max(0, stepped));
+}
+
+/**
+ * The colour stage for the seconds being shown, given what the run started
+ * with. A stage lights only when the countdown started strictly beyond it, so
+ * a 5:00 session never reddens under a 5:00 critical stage while a 5:05 one
+ * does from 5:00 — the stage is a notice of what is left, not of where the
+ * time happens to sit when the session began. Critical is checked first, so
+ * an inverted pair still shows the stronger inner stage.
+ */
+export function colorStage(
+  seconds: number,
+  runSeconds: number,
+  warningSecs: number,
+  criticalSecs: number,
+): Stage {
+  if (criticalSecs > 0 && runSeconds > criticalSecs && seconds <= criticalSecs) {
+    return "critical";
+  }
+  if (warningSecs > 0 && runSeconds > warningSecs && seconds <= warningSecs) {
+    return "warning";
+  }
+  return "normal";
 }
 
 /**

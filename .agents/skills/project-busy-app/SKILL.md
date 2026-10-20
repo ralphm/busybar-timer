@@ -96,6 +96,40 @@ Do not use this skill for:
 - Normalize the returned values against `appmeta/settings.json` defaults
   before use; a stored document can be partial or stale after a schema
   change.
+- **A settings PUT must carry every field of the installed schema**: a
+  document whose `values` omit any field is rejected with HTTP 400
+  (`setting_provider_load_document` fails → `api_apps.c` replies
+  BAD_REQUEST). Read-modify-write, as this app's `saveDuration` does.
+  Evidence: `busy-app/busybar-firmware @ a3246bf035b4`,
+  `applications/services/web_server/http_api/api_apps.c`,
+  `lib/setting_provider/setting_provider.c`.
+- **Never bump `settings.json` version for additive fields.** JS app
+  settings get no migration hooks (`setting_provider_alloc(..., NULL, 0)`
+  in `js_app_settings_storage.c`), so when the stored document's version
+  differs from the schema's, `migrations_apply` fails and the device
+  resets the whole document to schema defaults and persists it — the
+  user silently loses their values (observed on the bar 2026-10-20: a
+  stored duration became the default after a 1→2 bump). The device fills
+  *missing* fields from schema defaults on load and rewrites the document
+  (per-field fallback → `reset` writes the default into the JSON), so an
+  additive field needs no version change at all. Evidence:
+  `busy-app/busybar-firmware @ a3246bf035b4`,
+  `lib/js_app/js_app_settings_storage.c`,
+  `lib/setting_provider/setting_provider.c` (migrations_apply,
+  setting_provider_load), `lib/setting_provider/types/type_int.c`
+  (reset writes default).
+- **App-originated settings writes are denied on current dev firmware.**
+  The runner marks its own fetches with `X-busybar-fetch: js`, and the
+  `js_apps_api_allowlist` allows only `GET apps/settings`
+  (`api_root.c:149`), so a `PUT` from inside the app is rejected with 403
+  (observed on the bar 2026-10-20, firmware r1028 / `a3246bf0`; the write
+  must stay best-effort in app code so the timer keeps running).
+  A workstation `PUT` without the marker header still succeeds — use it
+  to validate the exact document shape the app would write. Upstream:
+  busy-app/busybar-firmware#1104. Evidence:
+  `busy-app/busybar-firmware @ a3246bf035b4`,
+  `applications/services/web_server/http_api/api_root.c`
+  (js_apps_api_allowlist), `applications/services/js_runner/js_fetch_ext_header.h`.
 
 ### Input
 

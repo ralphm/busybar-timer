@@ -24,6 +24,8 @@ The timer is a small state machine — ready, running, paused, finished — driv
 
 The countdown is accurate to the second over its whole range. The last three seconds tick and the last five flash red, in step with the status LED, as the bar's own timer does; at zero, the finish cue plays, `DONE` flashes three times, and the app returns to the start screen by itself.
 
+Two optional stages colour the run-up to that end: the settings' warning seconds turn the digits amber and its critical seconds turn them red, each for its final stretch on the duration's own 5-second steps, and entering one cues the status LED once in that colour — a single blink of the device's own preset, not the last seconds' sustained one. Both fire only for a countdown that started beyond their mark: the colour is a notice of how much of a long session is left, not an alarm over a short one that began inside the window. A pause keeps the stage's colour, dimmed as white is, and the critical mark is clamped to the warning one so red is always the inner stage.
+
 ![the timer in its five states: ready, running, warning, paused, done](docs/states.png)
 
 Pausing lays the hourglass on its side: a real hourglass cannot be paused any other way, and a sideways glass reads as frozen at a glance. The glass tips over with a short motion and the sand settles against the glass as a slab; on resume it tips back up and the countdown continues from where it stopped. All of that is drawn art — the display API has no rotation — one set of frames per drain level.

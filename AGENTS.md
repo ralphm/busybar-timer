@@ -377,6 +377,7 @@ The device is reachable at its USB address by default; over Wi-Fi pass
   their license the same way.
 - App id is the reverse-DNS name `net.ralphm.timer`; the manifest `author`
   field carries the user's real name by explicit request (see SOW-0001).
+- Markdown in this repository is written with long lines: one line per paragraph or list item, with no hard wrapping (editors soft-wrap); code blocks, tables and headings keep their own line structure.
 
 ### Preservation Notes
 
